@@ -1,0 +1,8 @@
+name: greenland
+channels:
+  - defaults
+dependencies:
+  - python=3.12
+  - geopandas
+  - matplotlib
+prefix: /opt/miniconda3/envs/greenland
