@@ -1,25 +1,30 @@
+# This script loads a geodataframe with greenland ice sheet drainage basin shapefile.
+# There are seven main drainage basins and we use the Greenland_Basins_PS_v1.4.2.shp file.
+# The script relies on a local copy of the shapefile filder.
+
 import os
-import geopandas as gpd
 import matplotlib.pyplot as plt
 import pathlib
+import data_utils
 
 home_dir = os.path.join(
-        pathlib.Path.home(),
-        'earth-analytics',
-        'greenland-temperature',
-    )
+    pathlib.Path.home(),
+    'earth-analytics',
+    'greenland-temperature',
+)
 
 basins_path = os.path.join(
-        home_dir,
-        'data',
-        'doi_10_7280_D1WT11__v20190329',
-        'Greenland_Basins_PS_v1.4.2.shp',
-    )
+    home_dir,
+    'data',
+    'doi_10_7280_D1WT11__v20190329',
+    'Greenland_Basins_PS_v1.4.2.shp',
+)
 
-# Read the basins shapefile into a geopandas dataframe.
-gdf = gpd.read_file(basins_path)
-#gdf.plot()
-#plt.show()
+# Call the open_basins function to read and work with the shapefile.
+seven_basin = data_utils.open_basins(basins_path)
+
+# gdf.plot()
+# plt.show()
 
 # Just print the columns names
 # print(list(gdf.columns))
@@ -34,6 +39,12 @@ gdf = gpd.read_file(basins_path)
 # print(gdf[gdf["SUBREGION1"] == "NW"])
 
 # Aggregate smaller geometry into the larger basin geometry outlines.
-seven_basin = gdf.dissolve(by="SUBREGION1")
-seven_basin.plot()
-plt.show()
+# seven_basin = gdf.dissolve(by="SUBREGION1")
+# seven_basin.plot()
+# plt.show()
+
+# Try transforming seven_basins into geographic coordinates from the carra2 grib file.
+# gpd_transformed = gpd.to_crs(EPSG:4326)
+
+print(seven_basin.crs)
+print(seven_basin.shape)
