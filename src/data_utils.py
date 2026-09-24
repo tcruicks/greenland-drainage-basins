@@ -2,6 +2,7 @@
 # 1) Open and load the Greenland ice sheet drainage basins shapefile.
 # 2) Open and load the Carra2 dataset grib file that contains 2 meter temperature (monthly average).
 
+import pandas as pd
 import geopandas as gpd
 import xarray as xr
 
@@ -16,6 +17,21 @@ def open_basins(basins_path):
 
     return seven_basins
 
+def open_aws_locations(aws_path):
+    # Function receeves the path to the drainage basin shapefile.
+    # Reads the file and then creates the shapefile of the seven basins.
+
+    # Read the basins shapefile into a pandas dataframe.
+    aws_locations_df = pd.read_csv(aws_path)
+
+    # Convert pandas DataFrame to GeoDataFrame
+    aws_locations_gdf = gpd.GeoDataFrame(
+        aws_locations_df, 
+        geometry=gpd.points_from_xy(aws_locations_df.lon, aws_locations_df.lat),
+        crs="EPSG:4326" # Standard lat/lon coordinate reference system
+    )
+
+    return aws_locations_gdf
 
 def open_carra2(carra2_path):
     # Function opens the carra2 grib file and puts it into a dataset.
