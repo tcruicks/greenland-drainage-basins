@@ -102,5 +102,4 @@ distance_da = (
 
 min_index = np.argmin(distance_da.values)
 new = np.unravel_index(min_index, distance_da.shape)
-print(carra2_ds.latitude.isel(y=new[0], x=new[1]))
 print(carra2_ds.longitude.isel(y=new[0], x=new[1]))
