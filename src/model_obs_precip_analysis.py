@@ -32,12 +32,13 @@ basins_path = os.path.join(
     'clean_inset_gdf.shp',
 )
 
-carra2_pcp_path = os.path.join(
+carra2_pcp_path = (
+    os.path.join(
     home_dir,
     'data',
     'carra2',
     'cara2_greenland_monthly_totprecip_1985_2025.grib',
-)
+))
 
 # --------------------------------------------------------------
 # --------------------------------------------------------------
@@ -67,16 +68,6 @@ aws_points_within_basin_polygons = gpd.sjoin(
     predicate="within"
 )
 
-# These are the sites we want to focus on.
-# They have pre-2000 records.
-analysis_sites = ["CEN", "NAU", "CP1", "DY2", "SDL", "HUM", "NAE", "NSE"]
-
-cp1 = aws_points_within_basin_polygons[
-    aws_points_within_basin_polygons["Site ID"] == "CP1"
-]
-# print(cp1[["Site ID", "lat", "lon", "alt","SUBREGION1"]])
-
-
 # STEP 2: Open the Carra2 dataset
 
 # # Meteorological variable we want to process.
@@ -91,15 +82,58 @@ carra2_ds = carra2_ds.assign_coords(
     )
 )
 
-# STEP 2: Use Latitude-corrected planar distance to compute nearest 
-# neighbor grid cell to each observation site.  
-
-distance_da = (
-    (carra2_ds.latitude - cp1['lat'].iloc[0]) ** 2
-    + ((carra2_ds.longitude - cp1['lon'].iloc[0])
-       * np.cos(np.deg2rad(cp1['lat'].iloc[0]))) ** 2
+# STEP 3:
+# These are the sites we want to focus on.
+# They have pre-2000 records.
+# Loop through each site to extract the carra2 data for the grid cell that
+# corresponds to the location of the analysis_sites.
+analysis_sites = ["CEN", "NAU", "CP1", "DY2", "SDL", "HUM", "NAE", "NSE"]
+# Create a dataframe to hold our precip data for each site.
+# Establish the index as date/time.
+monthly_precip_df = pd.DataFrame(
+    index=carra2_ds.time.values
 )
 
-min_index = np.argmin(distance_da.values)
-new = np.unravel_index(min_index, distance_da.shape)
-print(carra2_ds.longitude.isel(y=new[0], x=new[1]))
+for site in analysis_sites:
+
+    # Get a row of gpd corresponding to current site.
+    aws = aws_points_within_basin_polygons[
+        aws_points_within_basin_polygons["Site ID"] == site
+    ]
+    # print(aws[["Site ID", "lat", "lon", "alt","SUBREGION1"]])
+
+    # STEP 4: Use Latitude-corrected planar distance to compute nearest
+    # neighbor grid cell to each observation site.
+    distance_da = (
+        (carra2_ds.latitude - aws['lat'].iloc[0]) ** 2
+        + ((carra2_ds.longitude - aws['lon'].iloc[0])
+               * np.cos(np.deg2rad(aws['lat'].iloc[0]))) ** 2
+    )
+
+    min_index = np.argmin(distance_da.values)
+    new = np.unravel_index(min_index, distance_da.shape)
+
+    # These are the lat and lon of the grid cell that corresponds to the CP1
+    # AWS obs station.
+    # print(carra2_ds.longitude.isel(y=new[0], x=new[1]))
+    # print(carra2_ds.latitude.isel(y=new[0], x=new[1]))
+
+    # STEP 5:  Now, extract the precipitation values from this grid cell.
+    # Convert from monthly mean of daily accumulated precipitation
+    # to monthly accumulated precipitation.
+    monthly_precip_da = carra2_ds.tp.isel(y=new[0], x=new[1]) * carra2_ds.time.dt.days_in_month
+    # Now update the attributes of cp1_tp_monthly_da
+    monthly_precip_da.attrs["units"] = "mm"
+    monthly_precip_da.attrs["long_name"] = (
+        f"CARRA2 monthly accumulated precipitation at {site}"
+    )
+    # Stick the precip values into the data frame established at the top.
+
+    monthly_precip_df[site] = monthly_precip_da.values
+
+# Rename the df index as time.
+monthly_precip_df.index.name = "time"
+# Write the df to disk as a .csv file.
+monthly_precip_df.to_csv(
+    "../data/carra2/carra2_monthly_precip_analysis_sites.csv"
+)
